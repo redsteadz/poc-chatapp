@@ -1,7 +1,11 @@
 // app/api/chat/route.ts (or similar)
 
 import { NextRequest, NextResponse } from "next/server";
-import { VertexAI } from "@google-cloud/vertexai";
+import {
+  HarmBlockThreshold,
+  HarmCategory,
+  VertexAI,
+} from "@google-cloud/vertexai";
 import { ChatRequest, ChatResponse } from "@/types/chat";
 import { books } from "./books";
 
@@ -35,9 +39,21 @@ const model = vertexAI.getGenerativeModel({
     temperature: 0.7,
     topP: 0.8,
   },
+  safetySettings: [
+    {
+      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+  ],
   systemInstruction: {
     role: "system",
-    parts: [{ text: books[0] }, { text: books[1] }],
+    parts: [
+      { text: books[0] },
+      { text: books[1] },
+      {
+        text: "Use the provided books strictly as context. Always respond in Arabic, ensuring clarity and accuracy. Avoid adding information not derived from the books.",
+      },
+    ],
   },
 });
 
