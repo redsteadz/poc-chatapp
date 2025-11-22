@@ -8,6 +8,9 @@ import {
 } from "@google-cloud/vertexai";
 import { ChatRequest, ChatResponse } from "@/types/chat";
 import { books } from "./books";
+import { db } from "@/db";
+import { promptTable } from "@/db/schema";
+import { sql } from "drizzle-orm";
 
 export const runtime = "nodejs"; // ensure Node runtime, not edge
 
@@ -68,6 +71,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const [{ total }] = await db
+      .select({
+        total: sql<number>`
+          coalesce(
+            sum(${promptTable.inputTokens}) + sum(${promptTable.outputTokens}),
+            0
+          )
+        `,
+      })
+      .from(promptTable);
+
+    const totalTokens = total ?? 0;
+
+    if (totalTokens > 1_000_000) {
+      return NextResponse.json(
+        { error: "1 million token limit reached. Reduce token usage." },
+        { status: 400 },
+      );
+    }
+
     // Format conversation history for Vertex AI
     const history = messages.map((msg) => ({
       role: msg.role === "user" ? "user" : "model",
@@ -92,6 +115,17 @@ export async function POST(request: NextRequest) {
     const chatResponse: ChatResponse = {
       message: aiMessage,
     };
+
+    const inputTokens = result.response.usageMetadata?.promptTokenCount || 0;
+    const outputTokens =
+      result.response.usageMetadata?.candidatesTokenCount || 0;
+
+    await db.insert(promptTable).values({
+      input: message,
+      output: aiMessage,
+      inputTokens,
+      outputTokens,
+    });
 
     return NextResponse.json(chatResponse);
   } catch (error) {
