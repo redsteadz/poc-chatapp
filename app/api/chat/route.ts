@@ -54,7 +54,7 @@ const model = vertexAI.getGenerativeModel({
       { text: books[0] },
       { text: books[1] },
       {
-        text: "Use the provided books strictly as context. Always respond in Arabic, ensuring clarity and accuracy. Avoid adding information not derived from the books.",
+        text: "Use the provided books strictly as context. Always respond in Arabic, ensuring clarity and accuracy. Avoid adding information not derived from the books. Also provide the explanation for the answer provided. Whether that be for questions for any subject.",
       },
     ],
   },
